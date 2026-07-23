@@ -1,11 +1,25 @@
 {
     "name": "github-starred-repository-action",
     "version": "1.0.0",
-    "description": "A GitHub Action that fetches all starred repositories from a GitHub user and generates a customizable Markdown file.",
+    "description": "Generate human-readable and AI-ready knowledge bases from GitHub starred repositories.",
     "type": "module",
+    "main": "dist/index.js",
     "scripts": {
-        "build": "ncc build src/index.js --license licenses.txt"
+        "build": "ncc build src/index.js --minify",
+        "package": "npm run build"
     },
+    "keywords": [
+        "github",
+        "github-actions",
+        "github-action",
+        "stars",
+        "starred-repositories",
+        "knowledge-base",
+        "ai",
+        "llm"
+    ],
+    "author": "Deri Kurniawan",
+    "license": "MIT",
     "dependencies": {
         "@actions/core": "^3.0.1"
     },

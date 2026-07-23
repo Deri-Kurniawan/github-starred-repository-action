@@ -20,27 +20,38 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Generate starred repository list
+      - name: Generate starred repository files
         id: starred
         uses: ./
         with:
           username: Deri-Kurniawan
           output-file: test-output/REPOSITORY_STAR_LIST.md
-          group-by: language
-          sort-by: stars
-          sort-order: desc
-          format: table
-          token: ${{ github.token }}
+          digest-file: test-output/REPOSITORY_STAR_DIGEST.md
+          token: ${{ secrets.STARRED_REPOSITORIES_TOKEN }}
 
-      - name: Verify generated file
+      - name: Verify star list
         run: |
           test -f test-output/REPOSITORY_STAR_LIST.md
+
+      - name: Verify digest
+        run: |
+          test -f test-output/REPOSITORY_STAR_DIGEST.md
+
+      - name: Verify generated files are not empty
+        run: |
+          test -s test-output/REPOSITORY_STAR_LIST.md
+          test -s test-output/REPOSITORY_STAR_DIGEST.md
 
       - name: Display action outputs
         run: |
           echo "Total repositories: ${{ steps.starred.outputs.count }}"
-          echo "Generated file: ${{ steps.starred.outputs.file }}"
+          echo "Star list: ${{ steps.starred.outputs.file }}"
+          echo "Digest: ${{ steps.starred.outputs.digest-file }}"
 
-      - name: Display generated Markdown
+      - name: Display generated star list
         run: |
           cat test-output/REPOSITORY_STAR_LIST.md
+
+      - name: Display generated digest
+        run: |
+          cat test-output/REPOSITORY_STAR_DIGEST.md

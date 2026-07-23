@@ -1,53 +1,62 @@
-name: "GitHub Starred Repository List"
-description: "Fetch all starred repositories from a GitHub user and generate a customizable Markdown file"
-author: "Deri Kurniawan"
+name: GitHub Starred Repository Knowledge Base
+
+description: >
+  Fetch all starred repositories from the authenticated GitHub user
+  and generate a human-readable Markdown table and an AI-ready
+  repository knowledge base.
+
+author: Deri Kurniawan
 
 branding:
-  icon: "star"
-  color: "yellow"
+  icon: star
+  color: yellow
 
 inputs:
   username:
-    description: "GitHub username whose starred repositories will be fetched"
-    required: true
+    description: >
+      GitHub username displayed in the generated files.
+      If omitted, the authenticated GitHub username is used.
+    required: false
 
   output-file:
-    description: "Path and filename of the generated Markdown file"
+    description: >
+      Path and filename of the generated human-readable Markdown table.
     required: false
-    default: "REPOSITORY_STAR_LIST.md"
+    default: REPOSITORY_STAR_LIST.md
 
-  group-by:
-    description: "Group repositories by none, language, or owner"
+  digest-file:
+    description: >
+      Path and filename of the generated AI-friendly repository knowledge base.
     required: false
-    default: "language"
+    default: REPOSITORY_STAR_DIGEST.md
 
   sort-by:
-    description: "Sort repositories by name, stars, or updated"
+    description: >
+      Sort repositories by name, stars, or updated.
     required: false
-    default: "name"
+    default: name
 
   sort-order:
-    description: "Sort order: asc or desc"
+    description: >
+      Sort order: asc or desc.
     required: false
-    default: "asc"
-
-  format:
-    description: "Output format: list or table"
-    required: false
-    default: "table"
+    default: asc
 
   token:
-    description: "GitHub token used to access the GitHub API"
-    required: false
-    default: ${{ github.token }}
+    description: >
+      GitHub token used to access the authenticated user's starred repositories.
+    required: true
 
 outputs:
   count:
-    description: "Total number of starred repositories fetched"
+    description: Total number of starred repositories fetched.
 
   file:
-    description: "Path of the generated Markdown file"
+    description: Path of the generated Markdown table.
+
+  digest-file:
+    description: Path of the generated AI-friendly digest.
 
 runs:
-  using: "node24"
-  main: "dist/index.js"
+  using: node24
+  main: dist/index.js

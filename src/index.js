@@ -4,12 +4,6 @@ import path from "node:path";
 
 const PER_PAGE = 100;
 
-const VALID_GROUP_BY = [
-    "none",
-    "language",
-    "owner",
-];
-
 const VALID_SORT_BY = [
     "name",
     "stars",
@@ -21,24 +15,44 @@ const VALID_SORT_ORDER = [
     "desc",
 ];
 
-const VALID_FORMATS = [
-    "list",
-    "table",
-];
+async function fetchAuthenticatedUser(token) {
+    const response = await fetch(
+        "https://api.github.com/user",
+        {
+            headers: {
+                Accept: "application/vnd.github+json",
+                Authorization: `Bearer ${token}`,
+                "X-GitHub-Api-Version": "2022-11-28",
+            },
+        },
+    );
 
-async function fetchStarredRepositories(username, token) {
+    if (!response.ok) {
+        const errorBody = await response.text();
+
+        throw new Error(
+            [
+                "Failed to fetch authenticated GitHub user.",
+                `Status: ${response.status} ${response.statusText}`,
+                errorBody,
+            ].join("\n"),
+        );
+    }
+
+    return response.json();
+}
+
+async function fetchStarredRepositories(token) {
     const repositories = [];
     let page = 1;
 
     while (true) {
         core.info(
-            `Fetching starred repositories for "${username}" - page ${page}...`,
+            `Fetching starred repositories - page ${page}...`,
         );
 
         const response = await fetch(
-            `https://api.github.com/users/${encodeURIComponent(
-                username,
-            )}/starred?per_page=${PER_PAGE}&page=${page}`,
+            `https://api.github.com/user/starred?per_page=${PER_PAGE}&page=${page}`,
             {
                 headers: {
                     Accept: "application/vnd.github+json",
@@ -52,7 +66,11 @@ async function fetchStarredRepositories(username, token) {
             const errorBody = await response.text();
 
             throw new Error(
-                `GitHub API request failed: ${response.status} ${response.statusText}\n${errorBody}`,
+                [
+                    "GitHub API request failed.",
+                    `Status: ${response.status} ${response.statusText}`,
+                    errorBody,
+                ].join("\n"),
             );
         }
 
@@ -65,13 +83,17 @@ async function fetchStarredRepositories(username, token) {
         }
 
         if (data.length === 0) {
+            core.info(
+                `No more repositories found. Finished at page ${page}.`,
+            );
+
             break;
         }
 
         repositories.push(...data);
 
         core.info(
-            `Page ${page}: fetched ${data.length}. Total: ${repositories.length}`,
+            `Page ${page}: fetched ${data.length} repositories. Total: ${repositories.length}.`,
         );
 
         page++;
@@ -86,7 +108,9 @@ function sortRepositories(
     sortOrder,
 ) {
     const multiplier =
-        sortOrder === "asc" ? 1 : -1;
+        sortOrder === "asc"
+            ? 1
+            : -1;
 
     return [...repositories].sort(
         (a, b) => {
@@ -94,22 +118,34 @@ function sortRepositories(
 
             switch (sortBy) {
                 case "name":
-                    result = a.full_name.localeCompare(
-                        b.full_name,
-                    );
+                    result =
+                        a.full_name.localeCompare(
+                            b.full_name,
+                            undefined,
+                            {
+                                sensitivity: "base",
+                            },
+                        );
                     break;
 
                 case "stars":
                     result =
-                        (a.stargazers_count || 0) -
-                        (b.stargazers_count || 0);
+                        (a.stargazers_count ?? 0) -
+                        (b.stargazers_count ?? 0);
                     break;
 
                 case "updated":
                     result =
-                        new Date(a.updated_at).getTime() -
-                        new Date(b.updated_at).getTime();
+                        new Date(
+                            a.updated_at,
+                        ).getTime() -
+                        new Date(
+                            b.updated_at,
+                        ).getTime();
                     break;
+
+                default:
+                    result = 0;
             }
 
             return result * multiplier;
@@ -117,70 +153,42 @@ function sortRepositories(
     );
 }
 
-function getGroupName(repository, groupBy) {
-    switch (groupBy) {
-        case "language":
-            return repository.language || "Other";
-
-        case "owner":
-            return repository.owner?.login || "Unknown";
-
-        case "none":
-        default:
-            return "All Repositories";
-    }
-}
-
-function groupRepositories(
-    repositories,
-    groupBy,
-) {
-    const groups = new Map();
-
-    for (const repository of repositories) {
-        const groupName = getGroupName(
-            repository,
-            groupBy,
-        );
-
-        if (!groups.has(groupName)) {
-            groups.set(groupName, []);
-        }
-
-        groups
-            .get(groupName)
-            .push(repository);
-    }
-
-    return groups;
-}
-
 function escapeMarkdown(value) {
-    return String(value || "")
+    return String(value ?? "")
         .replace(/\|/g, "\\|")
         .replace(/\r?\n|\r/g, " ")
         .trim();
 }
 
-function formatStars(count) {
-    return `⭐ ${count.toLocaleString()}`;
+function formatNumber(value) {
+    return Number(
+        value ?? 0,
+    ).toLocaleString("en-US");
 }
 
-function generateList(repositories) {
-    return repositories
-        .map((repository) => {
-            const description =
-                escapeMarkdown(
-                    repository.description,
-                ) ||
-                "No description provided.";
-
-            return `- [**${repository.full_name}**](${repository.html_url}) — ${description}`;
-        })
-        .join("\n");
+function formatBoolean(value) {
+    return value ? "Yes" : "No";
 }
 
-function generateTable(repositories) {
+function formatTopics(topics) {
+    if (
+        !Array.isArray(topics) ||
+        topics.length === 0
+    ) {
+        return "None";
+    }
+
+    return topics
+        .map(
+            (topic) =>
+                `\`${escapeMarkdown(topic)}\``,
+        )
+        .join(", ");
+}
+
+function generateRepositoryTable(
+    repositories,
+) {
     const rows = repositories.map(
         (repository) => {
             const description =
@@ -189,78 +197,152 @@ function generateTable(repositories) {
                 ) ||
                 "No description provided.";
 
-            return `| [**${repository.full_name}**](${repository.html_url}) | ${formatStars(repository.stargazers_count)} | ${description} |`;
+            const language =
+                escapeMarkdown(
+                    repository.language,
+                ) || "N/A";
+
+            return [
+                `| [**${escapeMarkdown(repository.full_name)}**](${repository.html_url})`,
+                `| ${formatNumber(repository.stargazers_count)}`,
+                `| ${formatNumber(repository.forks_count)}`,
+                `| ${language}`,
+                `| ${description} |`,
+            ].join(" ");
         },
     );
 
     return [
-        "| Repository | Stars | Description |",
-        "|---|---:|---|",
+        "| Repository | Stars | Forks | Language | Description |",
+        "|---|---:|---:|---|---|",
         ...rows,
     ].join("\n");
 }
 
-function generateMarkdown({
+function generateStarListMarkdown({
     username,
     repositories,
-    groupBy,
     sortBy,
     sortOrder,
-    format,
 }) {
     const generatedAt =
         new Date().toISOString();
 
-    const groups =
-        groupRepositories(
-            repositories,
-            groupBy,
-        );
-
-    const output = [
+    return [
         "# Starred Repositories",
         "",
         `- **User:** [${username}](https://github.com/${username})`,
-        `- **Total:** ${repositories.length}`,
-        `- **Grouped by:** ${groupBy}`,
+        `- **Total:** ${formatNumber(repositories.length)}`,
         `- **Sorted by:** ${sortBy} (${sortOrder})`,
-        `- **Format:** ${format}`,
-        `- **Last updated:** ${generatedAt}`,
+        `- **Generated at:** ${generatedAt}`,
         "",
         "---",
         "",
-    ];
-
-    for (const [
-        groupName,
-        groupRepositoriesList,
-    ] of groups) {
-        output.push(
-            `## ${groupName} (${groupRepositoriesList.length})`,
-            "",
-        );
-
-        if (format === "table") {
-            output.push(
-                generateTable(
-                    groupRepositoriesList,
-                ),
-            );
-        } else {
-            output.push(
-                generateList(
-                    groupRepositoriesList,
-                ),
-            );
-        }
-
-        output.push("", "");
-    }
-
-    return output.join("\n");
+        generateRepositoryTable(
+            repositories,
+        ),
+        "",
+    ].join("\n");
 }
 
-async function writeMarkdownFile(
+function generateRepositoryDigest(
+    repository,
+) {
+    const owner =
+        repository.owner?.login ||
+        "Unknown";
+
+    const topics =
+        Array.isArray(repository.topics)
+            ? repository.topics
+            : [];
+
+    return [
+        `## Repository: ${repository.full_name}`,
+        "",
+        "### Identity",
+        "",
+        `- **Name:** ${repository.name}`,
+        `- **Owner:** ${owner}`,
+        `- **URL:** ${repository.html_url}`,
+        `- **Clone URL:** ${repository.clone_url}`,
+        "",
+        "### Description",
+        "",
+        repository.description ||
+        "No description provided.",
+        "",
+        "### Technology",
+        "",
+        `- **Primary Language:** ${repository.language || "N/A"
+        }`,
+        `- **Topics:** ${formatTopics(topics)}`,
+        "",
+        "### Popularity",
+        "",
+        `- **Stars:** ${formatNumber(repository.stargazers_count)}`,
+        `- **Forks:** ${formatNumber(repository.forks_count)}`,
+        `- **Watchers:** ${formatNumber(repository.watchers_count)}`,
+        "",
+        "### Repository Status",
+        "",
+        `- **Archived:** ${formatBoolean(repository.archived)}`,
+        `- **Fork:** ${formatBoolean(repository.fork)}`,
+        `- **Open Issues:** ${formatNumber(repository.open_issues_count)}`,
+        `- **Default Branch:** ${repository.default_branch || "N/A"
+        }`,
+        "",
+        "### License",
+        "",
+        repository.license?.name ||
+        "No license information.",
+        "",
+        "### Dates",
+        "",
+        `- **Created:** ${repository.created_at || "N/A"}`,
+        `- **Updated:** ${repository.updated_at || "N/A"}`,
+        `- **Pushed:** ${repository.pushed_at || "N/A"}`,
+        "",
+        "---",
+        "",
+    ].join("\n");
+}
+
+function generateDigestMarkdown({
+    username,
+    repositories,
+    sortBy,
+    sortOrder,
+}) {
+    const generatedAt =
+        new Date().toISOString();
+
+    const repositorySections =
+        repositories
+            .map(generateRepositoryDigest)
+            .join("\n");
+
+    return [
+        "# GitHub Starred Repository Knowledge Base",
+        "",
+        "This document is an AI-friendly knowledge base generated from a user's GitHub starred repositories.",
+        "",
+        "It contains repository metadata, descriptions, topics, technology information, popularity metrics, repository status, and dates.",
+        "",
+        "## Collection Overview",
+        "",
+        `- **GitHub User:** ${username}`,
+        `- **Total Repositories:** ${formatNumber(repositories.length)}`,
+        `- **Sorted by:** ${sortBy} (${sortOrder})`,
+        `- **Generated at:** ${generatedAt}`,
+        "",
+        "---",
+        "",
+        repositorySections,
+    ].join("\n");
+}
+
+async function writeFile(
     outputFile,
     content,
 ) {
@@ -276,6 +358,10 @@ async function writeMarkdownFile(
         content,
         "utf8",
     );
+
+    core.info(
+        `Generated file: ${outputFile}`,
+    );
 }
 
 function validateInput(
@@ -285,8 +371,10 @@ function validateInput(
 ) {
     if (!validValues.includes(value)) {
         throw new Error(
-            `Invalid "${name}" value "${value}". ` +
-            `Expected one of: ${validValues.join(", ")}`,
+            [
+                `Invalid "${name}" value: "${value}".`,
+                `Expected one of: ${validValues.join(", ")}`,
+            ].join(" "),
         );
     }
 }
@@ -294,17 +382,15 @@ function validateInput(
 async function run() {
     try {
         const username =
-            core.getInput("username", {
-                required: true,
-            });
+            core.getInput("username");
 
         const outputFile =
             core.getInput("output-file") ||
             "REPOSITORY_STAR_LIST.md";
 
-        const groupBy =
-            core.getInput("group-by") ||
-            "language";
+        const digestFile =
+            core.getInput("digest-file") ||
+            "REPOSITORY_STAR_DIGEST.md";
 
         const sortBy =
             core.getInput("sort-by") ||
@@ -313,10 +399,6 @@ async function run() {
         const sortOrder =
             core.getInput("sort-order") ||
             "asc";
-
-        const format =
-            core.getInput("format") ||
-            "table";
 
         const token =
             core.getInput("token") ||
@@ -327,12 +409,6 @@ async function run() {
                 "GitHub token is required.",
             );
         }
-
-        validateInput(
-            "group-by",
-            groupBy,
-            VALID_GROUP_BY,
-        );
 
         validateInput(
             "sort-by",
@@ -346,15 +422,25 @@ async function run() {
             VALID_SORT_ORDER,
         );
 
-        validateInput(
-            "format",
-            format,
-            VALID_FORMATS,
+        const authenticatedUser =
+            await fetchAuthenticatedUser(
+                token,
+            );
+
+        const resolvedUsername =
+            username ||
+            authenticatedUser.login;
+
+        core.info(
+            `Authenticated GitHub user: ${authenticatedUser.login}`,
+        );
+
+        core.info(
+            `Generating starred repository data for: ${resolvedUsername}`,
         );
 
         const repositories =
             await fetchStarredRepositories(
-                username,
                 token,
             );
 
@@ -365,20 +451,32 @@ async function run() {
                 sortOrder,
             );
 
-        const markdown =
-            generateMarkdown({
-                username,
+        const starList =
+            generateStarListMarkdown({
+                username: resolvedUsername,
                 repositories:
                     sortedRepositories,
-                groupBy,
                 sortBy,
                 sortOrder,
-                format,
             });
 
-        await writeMarkdownFile(
+        const digest =
+            generateDigestMarkdown({
+                username: resolvedUsername,
+                repositories:
+                    sortedRepositories,
+                sortBy,
+                sortOrder,
+            });
+
+        await writeFile(
             outputFile,
-            markdown,
+            starList,
+        );
+
+        await writeFile(
+            digestFile,
+            digest,
         );
 
         core.setOutput(
@@ -391,12 +489,13 @@ async function run() {
             outputFile,
         );
 
-        core.info(
-            `Successfully generated ${outputFile}`,
+        core.setOutput(
+            "digest-file",
+            digestFile,
         );
 
         core.info(
-            `Total repositories: ${repositories.length}`,
+            `Successfully processed ${repositories.length} starred repositories.`,
         );
     } catch (error) {
         core.setFailed(
