@@ -13,45 +13,59 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  test-public:
+    name: Test Public Mode
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Generate starred repository files
+      - name: Generate public starred repositories
         id: starred
         uses: ./
         with:
           username: Deri-Kurniawan
-          output-file: test-output/REPOSITORY_STAR_LIST.md
-          digest-file: test-output/REPOSITORY_STAR_DIGEST.md
-          token: ${{ secrets.STARRED_REPOSITORIES_TOKEN }}
+          output-file: test-output/public/REPOSITORY_STAR_LIST.md
+          digest-file: test-output/public/REPOSITORY_STAR_DIGEST.md
 
-      - name: Verify star list
+      - name: Verify generated files
         run: |
-          test -f test-output/REPOSITORY_STAR_LIST.md
+          test -f test-output/public/REPOSITORY_STAR_LIST.md
+          test -f test-output/public/REPOSITORY_STAR_DIGEST.md
 
-      - name: Verify digest
-        run: |
-          test -f test-output/REPOSITORY_STAR_DIGEST.md
+          test -s test-output/public/REPOSITORY_STAR_LIST.md
+          test -s test-output/public/REPOSITORY_STAR_DIGEST.md
 
-      - name: Verify generated files are not empty
+      - name: Display result
         run: |
-          test -s test-output/REPOSITORY_STAR_LIST.md
-          test -s test-output/REPOSITORY_STAR_DIGEST.md
-
-      - name: Display action outputs
-        run: |
-          echo "Total repositories: ${{ steps.starred.outputs.count }}"
-          echo "Star list: ${{ steps.starred.outputs.file }}"
+          echo "Repositories: ${{ steps.starred.outputs.count }}"
+          echo "File: ${{ steps.starred.outputs.file }}"
           echo "Digest: ${{ steps.starred.outputs.digest-file }}"
 
-      - name: Display generated star list
-        run: |
-          cat test-output/REPOSITORY_STAR_LIST.md
+  test-authenticated:
+    name: Test Authenticated Mode
+    runs-on: ubuntu-latest
 
-      - name: Display generated digest
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate authenticated starred repositories
+        id: starred
+        uses: ./
+        with:
+          username: Deri-Kurniawan
+          output-file: test-output/authenticated/REPOSITORY_STAR_LIST.md
+          digest-file: test-output/authenticated/REPOSITORY_STAR_DIGEST.md
+          token: ${{ secrets.STARRED_REPOSITORIES_TOKEN }}
+
+      - name: Verify generated files
         run: |
-          cat test-output/REPOSITORY_STAR_DIGEST.md
+          test -f test-output/authenticated/REPOSITORY_STAR_LIST.md
+          test -f test-output/authenticated/REPOSITORY_STAR_DIGEST.md
+
+          test -s test-output/authenticated/REPOSITORY_STAR_LIST.md
+          test -s test-output/authenticated/REPOSITORY_STAR_DIGEST.md

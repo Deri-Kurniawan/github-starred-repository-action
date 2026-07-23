@@ -15,52 +15,38 @@ const VALID_SORT_ORDER = [
     "desc",
 ];
 
-async function fetchAuthenticatedUser(token) {
-    const response = await fetch(
-        "https://api.github.com/user",
-        {
-            headers: {
-                Accept: "application/vnd.github+json",
-                Authorization: `Bearer ${token}`,
-                "X-GitHub-Api-Version": "2022-11-28",
-            },
-        },
-    );
+function createHeaders(token) {
+    const headers = {
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    };
 
-    if (!response.ok) {
-        const errorBody = await response.text();
-
-        throw new Error(
-            [
-                "Failed to fetch authenticated GitHub user.",
-                `Status: ${response.status} ${response.statusText}`,
-                errorBody,
-            ].join("\n"),
-        );
+    if (token) {
+        headers.Authorization = `Bearer ${token}`;
     }
 
-    return response.json();
+    return headers;
 }
 
-async function fetchStarredRepositories(token) {
+async function fetchStarredRepositories(
+    username,
+    token,
+) {
     const repositories = [];
     let page = 1;
 
     while (true) {
         core.info(
-            `Fetching starred repositories - page ${page}...`,
+            `Fetching starred repositories for "${username}" - page ${page}...`,
         );
 
-        const response = await fetch(
-            `https://api.github.com/user/starred?per_page=${PER_PAGE}&page=${page}`,
-            {
-                headers: {
-                    Accept: "application/vnd.github+json",
-                    Authorization: `Bearer ${token}`,
-                    "X-GitHub-Api-Version": "2022-11-28",
-                },
-            },
-        );
+        const url =
+            `https://api.github.com/users/${encodeURIComponent(username)}/starred` +
+            `?per_page=${PER_PAGE}&page=${page}`;
+
+        const response = await fetch(url, {
+            headers: createHeaders(token),
+        });
 
         if (!response.ok) {
             const errorBody = await response.text();
@@ -224,15 +210,22 @@ function generateStarListMarkdown({
     repositories,
     sortBy,
     sortOrder,
+    authenticated,
 }) {
     const generatedAt =
         new Date().toISOString();
+
+    const accessMode =
+        authenticated
+            ? "Authenticated"
+            : "Public";
 
     return [
         "# Starred Repositories",
         "",
         `- **User:** [${username}](https://github.com/${username})`,
         `- **Total:** ${formatNumber(repositories.length)}`,
+        `- **Access:** ${accessMode}`,
         `- **Sorted by:** ${sortBy} (${sortOrder})`,
         `- **Generated at:** ${generatedAt}`,
         "",
@@ -313,9 +306,15 @@ function generateDigestMarkdown({
     repositories,
     sortBy,
     sortOrder,
+    authenticated,
 }) {
     const generatedAt =
         new Date().toISOString();
+
+    const accessMode =
+        authenticated
+            ? "Authenticated"
+            : "Public";
 
     const repositorySections =
         repositories
@@ -325,13 +324,10 @@ function generateDigestMarkdown({
     return [
         "# GitHub Starred Repository Knowledge Base",
         "",
-        "This document is an AI-friendly knowledge base generated from a user's GitHub starred repositories.",
-        "",
-        "It contains repository metadata, descriptions, topics, technology information, popularity metrics, repository status, and dates.",
-        "",
-        "## Collection Overview",
+        "This document is an AI-friendly knowledge base generated from GitHub starred repository metadata.",
         "",
         `- **GitHub User:** ${username}`,
+        `- **Access:** ${accessMode}`,
         `- **Total Repositories:** ${formatNumber(repositories.length)}`,
         `- **Sorted by:** ${sortBy} (${sortOrder})`,
         `- **Generated at:** ${generatedAt}`,
@@ -382,7 +378,9 @@ function validateInput(
 async function run() {
     try {
         const username =
-            core.getInput("username");
+            core.getInput("username", {
+                required: true,
+            });
 
         const outputFile =
             core.getInput("output-file") ||
@@ -402,13 +400,7 @@ async function run() {
 
         const token =
             core.getInput("token") ||
-            process.env.GITHUB_TOKEN;
-
-        if (!token) {
-            throw new Error(
-                "GitHub token is required.",
-            );
-        }
+            undefined;
 
         validateInput(
             "sort-by",
@@ -422,25 +414,23 @@ async function run() {
             VALID_SORT_ORDER,
         );
 
-        const authenticatedUser =
-            await fetchAuthenticatedUser(
-                token,
-            );
-
-        const resolvedUsername =
-            username ||
-            authenticatedUser.login;
+        const authenticated =
+            Boolean(token);
 
         core.info(
-            `Authenticated GitHub user: ${authenticatedUser.login}`,
+            `Access mode: ${authenticated
+                ? "authenticated"
+                : "public"
+            }`,
         );
 
         core.info(
-            `Generating starred repository data for: ${resolvedUsername}`,
+            `Fetching starred repositories for: ${username}`,
         );
 
         const repositories =
             await fetchStarredRepositories(
+                username,
                 token,
             );
 
@@ -453,20 +443,22 @@ async function run() {
 
         const starList =
             generateStarListMarkdown({
-                username: resolvedUsername,
+                username,
                 repositories:
                     sortedRepositories,
                 sortBy,
                 sortOrder,
+                authenticated,
             });
 
         const digest =
             generateDigestMarkdown({
-                username: resolvedUsername,
+                username,
                 repositories:
                     sortedRepositories,
                 sortBy,
                 sortOrder,
+                authenticated,
             });
 
         await writeFile(

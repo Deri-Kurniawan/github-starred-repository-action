@@ -1,9 +1,8 @@
 name: GitHub Starred Repository Knowledge Base
 
 description: >
-  Fetch all starred repositories from the authenticated GitHub user
-  and generate a human-readable Markdown table and an AI-ready
-  repository knowledge base.
+  Fetch all publicly accessible or authenticated GitHub starred repositories
+  and generate a human-readable Markdown table and an AI-ready knowledge base.
 
 author: Deri Kurniawan
 
@@ -14,13 +13,12 @@ branding:
 inputs:
   username:
     description: >
-      GitHub username displayed in the generated files.
-      If omitted, the authenticated GitHub username is used.
-    required: false
+      GitHub username whose starred repositories should be fetched.
+    required: true
 
   output-file:
     description: >
-      Path and filename of the generated human-readable Markdown table.
+      Path and filename of the generated Markdown repository table.
     required: false
     default: REPOSITORY_STAR_LIST.md
 
@@ -44,8 +42,9 @@ inputs:
 
   token:
     description: >
-      GitHub token used to access the authenticated user's starred repositories.
-    required: true
+      Optional GitHub token. If provided, authenticated API requests are used.
+      Without a token, the Action fetches publicly accessible starred repositories.
+    required: false
 
 outputs:
   count:
