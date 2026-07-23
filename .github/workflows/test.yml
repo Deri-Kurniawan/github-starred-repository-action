@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   test:
@@ -26,17 +26,21 @@ jobs:
         with:
           username: Deri-Kurniawan
           output-file: test-output/REPOSITORY_STAR_LIST.md
+          group-by: language
+          sort-by: stars
+          sort-order: desc
+          format: table
           token: ${{ github.token }}
-
-      - name: Display outputs
-        run: |
-          echo "Total repositories: ${{ steps.starred.outputs.count }}"
-          echo "Generated file: ${{ steps.starred.outputs.file }}"
 
       - name: Verify generated file
         run: |
           test -f test-output/REPOSITORY_STAR_LIST.md
 
-      - name: Display generated file
+      - name: Display action outputs
+        run: |
+          echo "Total repositories: ${{ steps.starred.outputs.count }}"
+          echo "Generated file: ${{ steps.starred.outputs.file }}"
+
+      - name: Display generated Markdown
         run: |
           cat test-output/REPOSITORY_STAR_LIST.md

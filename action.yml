@@ -16,6 +16,26 @@ inputs:
     required: false
     default: "REPOSITORY_STAR_LIST.md"
 
+  group-by:
+    description: "Group repositories by none, language, or owner"
+    required: false
+    default: "language"
+
+  sort-by:
+    description: "Sort repositories by name, stars, or updated"
+    required: false
+    default: "name"
+
+  sort-order:
+    description: "Sort order: asc or desc"
+    required: false
+    default: "asc"
+
+  format:
+    description: "Output format: list or table"
+    required: false
+    default: "table"
+
   token:
     description: "GitHub token used to access the GitHub API"
     required: false
@@ -29,5 +49,5 @@ outputs:
     description: "Path of the generated Markdown file"
 
 runs:
-  using: "node20"
+  using: "node24"
   main: "dist/index.js"

@@ -28092,15 +28092,13 @@ module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("util");
 
 // EXPORTS
 __nccwpck_require__.d(__webpack_exports__, {
-  N4: () => (/* binding */ endGroup),
   V4: () => (/* binding */ getInput),
   pq: () => (/* binding */ info),
   C1: () => (/* binding */ setFailed),
-  uH: () => (/* binding */ setOutput),
-  Oh: () => (/* binding */ startGroup)
+  uH: () => (/* binding */ setOutput)
 });
 
-// UNUSED EXPORTS: ExitCode, addPath, debug, error, exportVariable, getBooleanInput, getIDToken, getMultilineInput, getState, group, isDebug, markdownSummary, notice, platform, saveState, setCommandEcho, setSecret, summary, toPlatformPath, toPosixPath, toWin32Path, warning
+// UNUSED EXPORTS: ExitCode, addPath, debug, endGroup, error, exportVariable, getBooleanInput, getIDToken, getMultilineInput, getState, group, isDebug, markdownSummary, notice, platform, saveState, setCommandEcho, setSecret, startGroup, summary, toPlatformPath, toPosixPath, toWin32Path, warning
 
 ;// CONCATENATED MODULE: external "os"
 const external_os_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("os");
@@ -30970,13 +30968,13 @@ function info(message) {
  * @param name The name of the output group
  */
 function startGroup(name) {
-    command_issue('group', name);
+    issue('group', name);
 }
 /**
  * End an output group.
  */
 function endGroup() {
-    command_issue('endgroup');
+    issue('endgroup');
 }
 /**
  * Wrap an asynchronous function call in a group.
@@ -31063,6 +31061,28 @@ __nccwpck_require__.a(__webpack_module__, async (__webpack_handle_async_dependen
 
 const PER_PAGE = 100;
 
+const VALID_GROUP_BY = [
+    "none",
+    "language",
+    "owner",
+];
+
+const VALID_SORT_BY = [
+    "name",
+    "stars",
+    "updated",
+];
+
+const VALID_SORT_ORDER = [
+    "asc",
+    "desc",
+];
+
+const VALID_FORMATS = [
+    "list",
+    "table",
+];
+
 async function fetchStarredRepositories(username, token) {
     const repositories = [];
     let page = 1;
@@ -31097,23 +31117,18 @@ async function fetchStarredRepositories(username, token) {
 
         if (!Array.isArray(data)) {
             throw new Error(
-                "Unexpected response from GitHub API. Expected an array.",
+                "Unexpected response from GitHub API.",
             );
         }
 
-        // Stop when GitHub returns an empty page.
         if (data.length === 0) {
-            _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .info */ .pq(
-                `No repositories found on page ${page}. Stopping pagination.`,
-            );
-
             break;
         }
 
         repositories.push(...data);
 
         _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .info */ .pq(
-            `Page ${page}: fetched ${data.length} repositories. Total: ${repositories.length}`,
+            `Page ${page}: fetched ${data.length}. Total: ${repositories.length}`,
         );
 
         page++;
@@ -31122,42 +31137,193 @@ async function fetchStarredRepositories(username, token) {
     return repositories;
 }
 
-function generateMarkdown(username, repositories) {
-    const generatedAt = new Date().toISOString();
+function sortRepositories(
+    repositories,
+    sortBy,
+    sortOrder,
+) {
+    const multiplier =
+        sortOrder === "asc" ? 1 : -1;
 
-    const header = [
+    return [...repositories].sort(
+        (a, b) => {
+            let result = 0;
+
+            switch (sortBy) {
+                case "name":
+                    result = a.full_name.localeCompare(
+                        b.full_name,
+                    );
+                    break;
+
+                case "stars":
+                    result =
+                        (a.stargazers_count || 0) -
+                        (b.stargazers_count || 0);
+                    break;
+
+                case "updated":
+                    result =
+                        new Date(a.updated_at).getTime() -
+                        new Date(b.updated_at).getTime();
+                    break;
+            }
+
+            return result * multiplier;
+        },
+    );
+}
+
+function getGroupName(repository, groupBy) {
+    switch (groupBy) {
+        case "language":
+            return repository.language || "Other";
+
+        case "owner":
+            return repository.owner?.login || "Unknown";
+
+        case "none":
+        default:
+            return "All Repositories";
+    }
+}
+
+function groupRepositories(
+    repositories,
+    groupBy,
+) {
+    const groups = new Map();
+
+    for (const repository of repositories) {
+        const groupName = getGroupName(
+            repository,
+            groupBy,
+        );
+
+        if (!groups.has(groupName)) {
+            groups.set(groupName, []);
+        }
+
+        groups
+            .get(groupName)
+            .push(repository);
+    }
+
+    return groups;
+}
+
+function escapeMarkdown(value) {
+    return String(value || "")
+        .replace(/\|/g, "\\|")
+        .replace(/\r?\n|\r/g, " ")
+        .trim();
+}
+
+function formatStars(count) {
+    return `⭐ ${count.toLocaleString()}`;
+}
+
+function generateList(repositories) {
+    return repositories
+        .map((repository) => {
+            const description =
+                escapeMarkdown(
+                    repository.description,
+                ) ||
+                "No description provided.";
+
+            return `- [**${repository.full_name}**](${repository.html_url}) — ${description}`;
+        })
+        .join("\n");
+}
+
+function generateTable(repositories) {
+    const rows = repositories.map(
+        (repository) => {
+            const description =
+                escapeMarkdown(
+                    repository.description,
+                ) ||
+                "No description provided.";
+
+            return `| [**${repository.full_name}**](${repository.html_url}) | ${formatStars(repository.stargazers_count)} | ${description} |`;
+        },
+    );
+
+    return [
+        "| Repository | Stars | Description |",
+        "|---|---:|---|",
+        ...rows,
+    ].join("\n");
+}
+
+function generateMarkdown({
+    username,
+    repositories,
+    groupBy,
+    sortBy,
+    sortOrder,
+    format,
+}) {
+    const generatedAt =
+        new Date().toISOString();
+
+    const groups =
+        groupRepositories(
+            repositories,
+            groupBy,
+        );
+
+    const output = [
         "# Starred Repositories",
-        "",
-        "> Automatically generated by GitHub Actions.",
         "",
         `- **User:** [${username}](https://github.com/${username})`,
         `- **Total:** ${repositories.length}`,
+        `- **Grouped by:** ${groupBy}`,
+        `- **Sorted by:** ${sortBy} (${sortOrder})`,
+        `- **Format:** ${format}`,
         `- **Last updated:** ${generatedAt}`,
         "",
         "---",
         "",
     ];
 
-    const repositoryList = repositories.map((repository) => {
-        const description =
-            repository.description
-                ?.replace(/\r?\n|\r/g, " ")
-                .trim() || "No description provided.";
+    for (const [
+        groupName,
+        groupRepositoriesList,
+    ] of groups) {
+        output.push(
+            `## ${groupName} (${groupRepositoriesList.length})`,
+            "",
+        );
 
-        return `- [**${repository.full_name}**](${repository.html_url}) — ${description}`;
-    });
+        if (format === "table") {
+            output.push(
+                generateTable(
+                    groupRepositoriesList,
+                ),
+            );
+        } else {
+            output.push(
+                generateList(
+                    groupRepositoriesList,
+                ),
+            );
+        }
 
-    return [
-        ...header,
-        ...repositoryList,
-        "",
-    ].join("\n");
+        output.push("", "");
+    }
+
+    return output.join("\n");
 }
 
-async function writeMarkdownFile(outputFile, content) {
-    const directory = node_path__WEBPACK_IMPORTED_MODULE_2__.dirname(outputFile);
+async function writeMarkdownFile(
+    outputFile,
+    content,
+) {
+    const directory =
+        node_path__WEBPACK_IMPORTED_MODULE_2__.dirname(outputFile);
 
-    // Create parent directories if they do not exist.
     await node_fs_promises__WEBPACK_IMPORTED_MODULE_1__.mkdir(directory, {
         recursive: true,
     });
@@ -31169,15 +31335,45 @@ async function writeMarkdownFile(outputFile, content) {
     );
 }
 
+function validateInput(
+    name,
+    value,
+    validValues,
+) {
+    if (!validValues.includes(value)) {
+        throw new Error(
+            `Invalid "${name}" value "${value}". ` +
+            `Expected one of: ${validValues.join(", ")}`,
+        );
+    }
+}
+
 async function run() {
     try {
-        const username = _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .getInput */ .V4("username", {
-            required: true,
-        });
+        const username =
+            _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .getInput */ .V4("username", {
+                required: true,
+            });
 
         const outputFile =
             _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .getInput */ .V4("output-file") ||
             "REPOSITORY_STAR_LIST.md";
+
+        const groupBy =
+            _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .getInput */ .V4("group-by") ||
+            "language";
+
+        const sortBy =
+            _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .getInput */ .V4("sort-by") ||
+            "name";
+
+        const sortOrder =
+            _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .getInput */ .V4("sort-order") ||
+            "asc";
+
+        const format =
+            _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .getInput */ .V4("format") ||
+            "table";
 
         const token =
             _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .getInput */ .V4("token") ||
@@ -31185,19 +31381,33 @@ async function run() {
 
         if (!token) {
             throw new Error(
-                "GitHub token is required. Provide the 'token' input.",
+                "GitHub token is required.",
             );
         }
 
-        _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .startGroup */ .Oh(
-            "GitHub Starred Repository Action",
+        validateInput(
+            "group-by",
+            groupBy,
+            VALID_GROUP_BY,
         );
 
-        _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .info */ .pq(`Username: ${username}`);
-        _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .info */ .pq(`Output file: ${outputFile}`);
-        _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .info */ .pq(`Repositories per request: ${PER_PAGE}`);
+        validateInput(
+            "sort-by",
+            sortBy,
+            VALID_SORT_BY,
+        );
 
-        _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .endGroup */ .N4();
+        validateInput(
+            "sort-order",
+            sortOrder,
+            VALID_SORT_ORDER,
+        );
+
+        validateInput(
+            "format",
+            format,
+            VALID_FORMATS,
+        );
 
         const repositories =
             await fetchStarredRepositories(
@@ -31205,11 +31415,23 @@ async function run() {
                 token,
             );
 
-        const markdown =
-            generateMarkdown(
-                username,
+        const sortedRepositories =
+            sortRepositories(
                 repositories,
+                sortBy,
+                sortOrder,
             );
+
+        const markdown =
+            generateMarkdown({
+                username,
+                repositories:
+                    sortedRepositories,
+                groupBy,
+                sortBy,
+                sortOrder,
+                format,
+            });
 
         await writeMarkdownFile(
             outputFile,
@@ -31227,20 +31449,18 @@ async function run() {
         );
 
         _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .info */ .pq(
-            `Successfully generated "${outputFile}".`,
+            `Successfully generated ${outputFile}`,
         );
 
         _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .info */ .pq(
-            `Total starred repositories: ${repositories.length}`,
+            `Total repositories: ${repositories.length}`,
         );
     } catch (error) {
-        if (error instanceof Error) {
-            _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .setFailed */ .C1(error.message);
-        } else {
-            _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .setFailed */ .C1(
-                "An unknown error occurred.",
-            );
-        }
+        _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .setFailed */ .C1(
+            error instanceof Error
+                ? error.message
+                : "Unknown error",
+        );
     }
 }
 
