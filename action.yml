@@ -1,8 +1,8 @@
 name: GitHub Starred Repository Knowledge Base
 
 description: >
-  Fetch all publicly accessible or authenticated GitHub starred repositories
-  and generate a human-readable Markdown table and an AI-ready knowledge base.
+  Fetch GitHub starred repositories and generate a human-readable Markdown
+  table and a compact AI-ready text knowledge base.
 
 author: Deri Kurniawan
 
@@ -12,38 +12,31 @@ branding:
 
 inputs:
   username:
-    description: >
-      GitHub username whose starred repositories should be fetched.
+    description: GitHub username whose starred repositories should be fetched.
     required: true
 
   output-file:
-    description: >
-      Path and filename of the generated Markdown repository table.
+    description: Path and filename of the generated Markdown repository table.
     required: false
     default: REPOSITORY_STAR_LIST.md
 
   digest-file:
-    description: >
-      Path and filename of the generated AI-friendly repository knowledge base.
+    description: Path and filename of the compact AI-ready repository digest.
     required: false
-    default: REPOSITORY_STAR_DIGEST.md
+    default: REPOSITORY_STAR_DIGEST.txt
 
   sort-by:
-    description: >
-      Sort repositories by name, stars, or updated.
+    description: Sort repositories by name, stars, or updated.
     required: false
     default: name
 
   sort-order:
-    description: >
-      Sort order: asc or desc.
+    description: Sort order: asc or desc.
     required: false
     default: asc
 
   token:
-    description: >
-      Optional GitHub token. If provided, authenticated API requests are used.
-      Without a token, the Action fetches publicly accessible starred repositories.
+    description: Optional GitHub token for authenticated API requests.
     required: false
 
 outputs:
@@ -54,7 +47,7 @@ outputs:
     description: Path of the generated Markdown table.
 
   digest-file:
-    description: Path of the generated AI-friendly digest.
+    description: Path of the generated AI-ready text digest.
 
 runs:
   using: node24
