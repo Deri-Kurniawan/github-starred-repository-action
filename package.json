@@ -1,7 +1,7 @@
 {
-    "name": "github-starred-repository-action",
+    "name": "github-starred-knowledge-base-action",
     "version": "1.0.0",
-    "description": "Generate human-readable and AI-ready knowledge bases from GitHub starred repositories.",
+    "description": "A GitHub Action that turns starred repositories into a human-readable Markdown list and a compact AI-ready knowledge base.",
     "type": "module",
     "main": "dist/index.js",
     "scripts": {
@@ -12,18 +12,18 @@
         "github",
         "github-actions",
         "github-action",
-        "stars",
         "starred-repositories",
         "knowledge-base",
         "ai",
-        "llm"
+        "llm",
+        "rag"
     ],
     "author": "Deri Kurniawan",
     "license": "MIT",
     "dependencies": {
-        "@actions/core": "^2.0.1"
+        "@actions/core": "^3.0.1"
     },
     "devDependencies": {
-        "@vercel/ncc": "^0.38.4"
+        "@vercel/ncc": "^0.44.1"
     }
 }

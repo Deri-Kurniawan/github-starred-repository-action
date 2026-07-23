@@ -1,48 +1,58 @@
-# GitHub Starred Repository Knowledge Base
+# GitHub Starred Knowledge Base
 
-> A reusable GitHub Action that turns GitHub starred repositories into a searchable Markdown table and a compact AI-ready knowledge base.
+> Turn your GitHub starred repositories into a human-readable Markdown list and a compact, AI-ready knowledge base.
+
+A reusable GitHub Action that fetches all starred repositories from a GitHub user and generates two useful outputs:
+
+* `STARRED_REPOSITORIES.md` — optimized for humans
+* `STARRED_REPOSITORIES.txt` — optimized for AI and LLM context
+
+The generated files can be used as a personal repository knowledge base for browsing, searching, RAG pipelines, and AI-assisted exploration.
 
 ## Features
 
 * ⭐ Fetches all starred repositories with automatic pagination.
-* 📋 Generates a searchable Markdown repository table.
-* 🤖 Generates a compact, AI-optimized text knowledge base.
-* 🔤 Sorts by repository name ascending by default.
-* 🔀 Supports sorting by `name`, `stars`, or `updated`.
+* 📋 Generates a human-readable Markdown repository table.
+* 🤖 Generates a compact AI-ready knowledge base.
+* 🔤 Sorts repositories by name ascending by default.
+* 🔀 Supports sorting by name, stars, or last update.
 * 📁 Supports custom output filenames and paths.
 * 🔑 GitHub token is optional.
-* 📦 Works with large starred repository collections.
+* 📦 Handles large starred repository collections.
+* 🔗 Generated results include a link to this Action's source repository.
 
 ## Generated Files
 
-By default, the Action generates:
+### `STARRED_REPOSITORIES.md`
 
-```text
-REPOSITORY_STAR_LIST.md
-REPOSITORY_STAR_DIGEST.txt
-```
+A human-readable list of starred repositories containing:
 
-### `REPOSITORY_STAR_LIST.md`
-
-A human-readable table containing:
-
-* Repository
+* Repository name
+* Repository URL
 * Stars
 * Forks
-* Language
+* Primary language
 * Description
+* Generation metadata
 
-The generated file also includes a link to this Action's source repository.
+Example:
 
-### `REPOSITORY_STAR_DIGEST.txt`
+| Repository                                                  |   Stars |  Forks | Language   | Description                                    |
+| ----------------------------------------------------------- | ------: | -----: | ---------- | ---------------------------------------------- |
+| [**facebook/react**](https://github.com/facebook/react)     | 240,000 | 50,000 | JavaScript | The library for web and native user interfaces |
+| [**microsoft/vscode**](https://github.com/microsoft/vscode) | 180,000 | 30,000 | TypeScript | Visual Studio Code                             |
 
-A compact, structured knowledge base optimized for AI and LLM consumption.
+The file is designed to be pleasant to read and browse directly on GitHub.
+
+### `STARRED_REPOSITORIES.txt`
+
+A compact, structured knowledge base designed for AI and LLM consumption.
 
 Example:
 
 ```text
-# GitHub Starred Repository Knowledge Base
-# Source: https://github.com/Deri-Kurniawan/github-starred-repository-action
+# GitHub Starred Knowledge Base
+# Source: https://github.com/Deri-Kurniawan/github-starred-knowledge-base-action
 # User: Deri-Kurniawan
 # Total: 2
 # Access: public
@@ -66,148 +76,112 @@ updated=2026-07-23T10:00:00Z
 pushed=2026-07-23T09:30:00Z
 ```
 
-The format minimizes unnecessary tokens while preserving useful repository metadata, making it suitable for:
+The format is intentionally compact to reduce unnecessary tokens while retaining useful repository metadata.
 
-* AI assistants
-* LLM context
-* RAG pipelines
-* Personal knowledge bases
-* Repository discovery
-* Semantic search
-
-For example, you can provide the digest to an AI and ask:
+This makes the file useful as context for questions such as:
 
 > Which repositories in my stars are related to authentication?
 
+> Find repositories related to PostgreSQL.
+
 > Which repositories should I study for building a real-time application?
 
-> What technologies am I most interested in?
-
-> Find repositories related to PostgreSQL.
+> What technologies am I most interested in based on my starred repositories?
 
 > Which starred repositories are useful for learning distributed systems?
 
-The Action does not clone or analyze repository source code.
+The Action does not clone or analyze repository source code. It only builds a structured knowledge base from GitHub repository metadata.
 
 ## Usage
 
-### Basic Usage
+Create a workflow in your repository:
 
-A GitHub token is optional.
+`.github/workflows/update-starred-repositories.yml`
 
 ```yaml
-name: Update Starred Repositories
+name: Update Starred Knowledge Base
 
 on:
   workflow_dispatch:
-
-jobs:
-  generate:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Generate starred repositories
-        uses: Deri-Kurniawan/github-starred-repository-action@v1
-        with:
-          username: Deri-Kurniawan
-```
-
-This generates:
-
-```text
-REPOSITORY_STAR_LIST.md
-REPOSITORY_STAR_DIGEST.txt
-```
-
-### Automatically Commit Changes
-
-```yaml
-name: Update Starred Repositories
-
-on:
-  workflow_dispatch:
-
-  schedule:
-    - cron: "0 */6 * * *"
 
 permissions:
   contents: write
 
 jobs:
   generate:
+    name: Generate Starred Knowledge Base
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Generate starred repositories
-        uses: Deri-Kurniawan/github-starred-repository-action@v1
+      - name: Generate starred knowledge base
+        id: starred
+        uses: Deri-Kurniawan/github-starred-knowledge-base-action@v1
         with:
           username: Deri-Kurniawan
 
-      - name: Commit changes
+      - name: Commit generated files
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           git add \
-            REPOSITORY_STAR_LIST.md \
-            REPOSITORY_STAR_DIGEST.txt
+            STARRED_REPOSITORIES.md \
+            STARRED_REPOSITORIES.txt
 
           if git diff --cached --quiet; then
             echo "No changes detected."
             exit 0
           fi
 
-          git commit -m "chore: update starred repositories"
+          git commit -m "chore: update starred knowledge base"
           git push
 ```
 
-## Authentication
+Run the workflow manually from:
 
-The `token` input is optional.
+**GitHub → Actions → Update Starred Knowledge Base → Run workflow**
 
-Without a token, the Action makes unauthenticated GitHub API requests and processes repositories returned as publicly accessible by GitHub.
+The Action will generate:
 
-With a token:
-
-```yaml
-with:
-  username: Deri-Kurniawan
-  token: ${{ secrets.STARRED_REPOSITORIES_TOKEN }}
+```text
+STARRED_REPOSITORIES.md
+STARRED_REPOSITORIES.txt
 ```
-
-the Action uses authenticated API requests.
-
-The Action only processes repository data returned by GitHub. It does not intentionally expose or print repository data that is unavailable to the API request.
 
 ## Inputs
 
-| Input         | Required | Default                      | Description                                            |
-| ------------- | -------- | ---------------------------- | ------------------------------------------------------ |
-| `username`    | Yes      | —                            | GitHub username whose starred repositories are fetched |
-| `output-file` | No       | `REPOSITORY_STAR_LIST.md`    | Markdown table output path                             |
-| `digest-file` | No       | `REPOSITORY_STAR_DIGEST.txt` | AI-ready text digest output path                       |
-| `sort-by`     | No       | `name`                       | Sort by `name`, `stars`, or `updated`                  |
-| `sort-order`  | No       | `asc`                        | Sort order: `asc` or `desc`                            |
-| `token`       | No       | —                            | Optional GitHub authentication token                   |
+| Input                 | Required | Default                    | Description                                            |
+| --------------------- | -------- | -------------------------- | ------------------------------------------------------ |
+| `username`            | Yes      | —                          | GitHub username whose starred repositories are fetched |
+| `markdown-file`       | No       | `STARRED_REPOSITORIES.md`  | Path of the human-readable Markdown output             |
+| `knowledge-base-file` | No       | `STARRED_REPOSITORIES.txt` | Path of the AI-ready knowledge base                    |
+| `sort-by`             | No       | `name`                     | Sort by `name`, `stars`, or `updated`                  |
+| `sort-order`          | No       | `asc`                      | Sort using `asc` or `desc`                             |
+| `token`               | No       | —                          | Optional GitHub token for authenticated API requests   |
 
 ## Custom Output Files
 
+You can customize the generated file paths:
+
 ```yaml
-with:
-  username: Deri-Kurniawan
-  output-file: docs/github-stars.md
-  digest-file: docs/github-stars.txt
+- name: Generate starred knowledge base
+  uses: Deri-Kurniawan/github-starred-knowledge-base-action@v1
+  with:
+    username: Deri-Kurniawan
+    markdown-file: docs/STARRED_REPOSITORIES.md
+    knowledge-base-file: docs/STARRED_REPOSITORIES.txt
 ```
 
 The Action automatically creates missing directories.
 
 ## Sorting
 
-### Name ascending — default
+### Repository name — ascending
+
+This is the default:
 
 ```yaml
 with:
@@ -231,9 +205,34 @@ with:
   sort-order: desc
 ```
 
+## Authentication
+
+The `token` input is optional.
+
+Without a token, the Action performs unauthenticated GitHub API requests.
+
+```yaml
+with:
+  username: Deri-Kurniawan
+```
+
+You can also provide a GitHub token:
+
+```yaml
+with:
+  username: Deri-Kurniawan
+  token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+Authenticated requests can provide a higher API rate limit and access to repositories available to the authenticated request.
+
+The Action only processes repository information returned by the GitHub API.
+
 ## Pagination
 
-The Action automatically fetches all available pages until GitHub returns an empty response.
+The Action automatically fetches all available pages.
+
+For example:
 
 ```text
 Page 1 → 100 repositories
@@ -241,33 +240,33 @@ Page 2 → 100 repositories
 Page 3 → 100 repositories
 ...
 Page N → remaining repositories
-Page N+1 → empty → stop
+Page N+1 → empty response → stop
 ```
 
 No manual page configuration is required.
 
 ## Outputs
 
-| Output        | Description                          |
-| ------------- | ------------------------------------ |
-| `count`       | Total number of repositories fetched |
-| `file`        | Generated Markdown table path        |
-| `digest-file` | Generated AI digest path             |
+| Output                | Description                          |
+| --------------------- | ------------------------------------ |
+| `count`               | Total number of repositories fetched |
+| `markdown-file`       | Generated Markdown file path         |
+| `knowledge-base-file` | Generated AI knowledge base path     |
 
 Example:
 
 ```yaml
-- name: Generate starred repositories
-  id: stars
-  uses: Deri-Kurniawan/github-starred-repository-action@v1
+- name: Generate starred knowledge base
+  id: starred
+  uses: Deri-Kurniawan/github-starred-knowledge-base-action@v1
   with:
     username: Deri-Kurniawan
 
-- name: Show result
+- name: Show outputs
   run: |
-    echo "Repositories: ${{ steps.stars.outputs.count }}"
-    echo "List: ${{ steps.stars.outputs.file }}"
-    echo "Digest: ${{ steps.stars.outputs.digest-file }}"
+    echo "Repositories: ${{ steps.starred.outputs.count }}"
+    echo "Markdown: ${{ steps.starred.outputs.markdown-file }}"
+    echo "Knowledge Base: ${{ steps.starred.outputs.knowledge-base-file }}"
 ```
 
 ## Development
@@ -292,6 +291,51 @@ dist/index.js
 
 The `dist` directory must be committed because GitHub Actions executes the compiled Action directly.
 
+## Testing
+
+The repository includes a workflow at:
+
+```text
+.github/workflows/test.yml
+```
+
+The test workflow runs the local Action using:
+
+```yaml
+uses: ./
+```
+
+It verifies that:
+
+* The Markdown file is generated.
+* The AI knowledge-base file is generated.
+* Both files contain content.
+* The Markdown output contains the Action source link.
+* The AI knowledge base contains the expected header and source.
+
+## Versioning
+
+This project uses a single `v1` tag for Action consumers.
+
+Use:
+
+```yaml
+uses: Deri-Kurniawan/github-starred-knowledge-base-action@v1
+```
+
+After updating the Action:
+
+```bash
+npm run build
+
+git add action.yml src/index.js dist/index.js
+git commit -m "feat: update action"
+git push origin main
+
+git tag -f v1
+git push origin v1 --force
+```
+
 ## License
 
-MIT
+[MIT License](LICENSE)

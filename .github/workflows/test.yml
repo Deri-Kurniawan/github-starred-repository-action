@@ -1,4 +1,4 @@
-name: Test GitHub Starred Repository Action
+name: Test GitHub Starred Knowledge Base Action
 
 on:
   push:
@@ -21,48 +21,42 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Generate starred repositories
+      - name: Generate starred knowledge base
         id: starred
         uses: ./
         with:
           username: Deri-Kurniawan
-          output-file: test-output/REPOSITORY_STAR_LIST.md
-          digest-file: test-output/REPOSITORY_STAR_DIGEST.txt
+          markdown-file: test-output/STARRED_REPOSITORIES.md
+          knowledge-base-file: test-output/STARRED_REPOSITORIES.txt
           sort-by: name
           sort-order: asc
 
       - name: Verify generated files
         run: |
-          test -f test-output/REPOSITORY_STAR_LIST.md
-          test -f test-output/REPOSITORY_STAR_DIGEST.txt
+          test -f test-output/STARRED_REPOSITORIES.md
+          test -f test-output/STARRED_REPOSITORIES.txt
 
-          test -s test-output/REPOSITORY_STAR_LIST.md
-          test -s test-output/REPOSITORY_STAR_DIGEST.txt
-
-          echo "Markdown file:"
-          ls -lh test-output/REPOSITORY_STAR_LIST.md
-
-          echo "Digest file:"
-          ls -lh test-output/REPOSITORY_STAR_DIGEST.txt
+          test -s test-output/STARRED_REPOSITORIES.md
+          test -s test-output/STARRED_REPOSITORIES.txt
 
       - name: Verify Markdown output
         run: |
           grep -q "# Starred Repositories" \
-            test-output/REPOSITORY_STAR_LIST.md
+            test-output/STARRED_REPOSITORIES.md
 
-          grep -q "github-starred-repository-action" \
-            test-output/REPOSITORY_STAR_LIST.md
+          grep -q "github-starred-knowledge-base-action" \
+            test-output/STARRED_REPOSITORIES.md
 
-      - name: Verify AI digest output
+      - name: Verify AI knowledge base
         run: |
-          grep -q "# GitHub Starred Repository Knowledge Base" \
-            test-output/REPOSITORY_STAR_DIGEST.txt
+          grep -q "# GitHub Starred Knowledge Base" \
+            test-output/STARRED_REPOSITORIES.txt
 
-          grep -q "# Source: https://github.com/Deri-Kurniawan/github-starred-repository-action" \
-            test-output/REPOSITORY_STAR_DIGEST.txt
+          grep -q "github-starred-knowledge-base-action" \
+            test-output/STARRED_REPOSITORIES.txt
 
-      - name: Show outputs
+      - name: Show results
         run: |
           echo "Repositories fetched: ${{ steps.starred.outputs.count }}"
-          echo "Markdown: ${{ steps.starred.outputs.file }}"
-          echo "Digest: ${{ steps.starred.outputs.digest-file }}"
+          echo "Markdown: ${{ steps.starred.outputs.markdown-file }}"
+          echo "Knowledge Base: ${{ steps.starred.outputs.knowledge-base-file }}"

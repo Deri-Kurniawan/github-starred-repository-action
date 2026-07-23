@@ -1,9 +1,11 @@
-name: GitHub Starred Repository Knowledge Base
-description: Generate a human-readable Markdown table and a compact AI-ready text knowledge base from GitHub starred repositories.
+name: GitHub Starred Knowledge Base
+
+description: Turn GitHub starred repositories into a human-readable Markdown list and a compact AI-ready knowledge base.
+
 author: Deri Kurniawan
 
 branding:
-  icon: star
+  icon: book-open
   color: yellow
 
 inputs:
@@ -11,15 +13,15 @@ inputs:
     description: GitHub username whose starred repositories should be fetched.
     required: true
 
-  output-file:
-    description: Path and filename of the generated Markdown repository table.
+  markdown-file:
+    description: Path and filename of the generated human-readable Markdown repository list.
     required: false
-    default: REPOSITORY_STAR_LIST.md
+    default: STARRED_REPOSITORIES.md
 
-  digest-file:
-    description: Path and filename of the compact AI-ready repository digest.
+  knowledge-base-file:
+    description: Path and filename of the generated compact AI-ready knowledge base.
     required: false
-    default: REPOSITORY_STAR_DIGEST.txt
+    default: STARRED_REPOSITORIES.txt
 
   sort-by:
     description: Sort repositories by name, stars, or updated.
@@ -39,11 +41,11 @@ outputs:
   count:
     description: Total number of starred repositories fetched.
 
-  file:
-    description: Path of the generated Markdown table.
+  markdown-file:
+    description: Path of the generated human-readable Markdown repository list.
 
-  digest-file:
-    description: Path of the generated AI-ready text digest.
+  knowledge-base-file:
+    description: Path of the generated AI-ready knowledge base.
 
 runs:
   using: node24
