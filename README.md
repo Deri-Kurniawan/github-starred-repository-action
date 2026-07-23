@@ -1,49 +1,81 @@
 # GitHub Starred Repository Knowledge Base
 
-> A reusable GitHub Action that turns GitHub starred repositories into a Markdown table and an AI-ready knowledge base.
+> A reusable GitHub Action that turns GitHub starred repositories into a searchable Markdown table and a compact AI-ready knowledge base.
 
 ## Features
 
 * ⭐ Fetches all starred repositories with automatic pagination.
 * 📋 Generates a searchable Markdown repository table.
-* 🤖 Generates an AI-friendly repository digest.
+* 🤖 Generates a compact, AI-optimized text knowledge base.
 * 🔤 Sorts by repository name ascending by default.
 * 🔀 Supports sorting by `name`, `stars`, or `updated`.
 * 📁 Supports custom output filenames and paths.
-* 🔑 Token is optional.
+* 🔑 GitHub token is optional.
 * 📦 Works with large starred repository collections.
 
 ## Generated Files
 
-By default:
+By default, the Action generates:
 
 ```text
 REPOSITORY_STAR_LIST.md
-REPOSITORY_STAR_DIGEST.md
+REPOSITORY_STAR_DIGEST.txt
 ```
 
 ### `REPOSITORY_STAR_LIST.md`
 
-A simple table for browsing starred repositories:
+A human-readable table containing:
 
-| Repository       | Stars | Forks | Language   | Description                                    |
-| ---------------- | ----: | ----: | ---------- | ---------------------------------------------- |
-| facebook/react   |  240k |   50k | JavaScript | The library for web and native user interfaces |
-| microsoft/vscode |  180k |   30k | TypeScript | Visual Studio Code                             |
-
-### `REPOSITORY_STAR_DIGEST.md`
-
-An AI-ready knowledge base containing repository metadata:
-
-* Description
+* Repository
+* Stars
+* Forks
 * Language
-* Topics
-* Stars and forks
-* License
-* Repository status
-* Dates
+* Description
 
-You can provide the digest to an AI assistant and ask:
+The generated file also includes a link to this Action's source repository.
+
+### `REPOSITORY_STAR_DIGEST.txt`
+
+A compact, structured knowledge base optimized for AI and LLM consumption.
+
+Example:
+
+```text
+# GitHub Starred Repository Knowledge Base
+# Source: https://github.com/Deri-Kurniawan/github-starred-repository-action
+# User: Deri-Kurniawan
+# Total: 2
+# Access: public
+# Sort: name asc
+
+REPO facebook/react
+url=https://github.com/facebook/react
+description=The library for web and native user interfaces.
+language=JavaScript
+topics=react,javascript,frontend,ui
+stars=240000
+forks=50000
+watchers=50000
+license=MIT
+archived=false
+fork=false
+open_issues=500
+default_branch=main
+created=2013-05-24T16:15:54Z
+updated=2026-07-23T10:00:00Z
+pushed=2026-07-23T09:30:00Z
+```
+
+The format minimizes unnecessary tokens while preserving useful repository metadata, making it suitable for:
+
+* AI assistants
+* LLM context
+* RAG pipelines
+* Personal knowledge bases
+* Repository discovery
+* Semantic search
+
+For example, you can provide the digest to an AI and ask:
 
 > Which repositories in my stars are related to authentication?
 
@@ -53,19 +85,55 @@ You can provide the digest to an AI assistant and ask:
 
 > Find repositories related to PostgreSQL.
 
+> Which starred repositories are useful for learning distributed systems?
+
 The Action does not clone or analyze repository source code.
 
 ## Usage
 
-### Without a Token
+### Basic Usage
 
-A token is optional. Without one, the Action makes unauthenticated API requests and processes the repositories GitHub makes publicly accessible.
+A GitHub token is optional.
 
 ```yaml
 name: Update Starred Repositories
 
 on:
   workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate starred repositories
+        uses: Deri-Kurniawan/github-starred-repository-action@v1
+        with:
+          username: Deri-Kurniawan
+```
+
+This generates:
+
+```text
+REPOSITORY_STAR_LIST.md
+REPOSITORY_STAR_DIGEST.txt
+```
+
+### Automatically Commit Changes
+
+```yaml
+name: Update Starred Repositories
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: "0 */6 * * *"
+
+permissions:
+  contents: write
 
 jobs:
   generate:
@@ -86,7 +154,7 @@ jobs:
 
           git add \
             REPOSITORY_STAR_LIST.md \
-            REPOSITORY_STAR_DIGEST.md
+            REPOSITORY_STAR_DIGEST.txt
 
           if git diff --cached --quiet; then
             echo "No changes detected."
@@ -97,9 +165,13 @@ jobs:
           git push
 ```
 
-### With a Token
+## Authentication
 
-Provide a GitHub token when authenticated API requests are desired:
+The `token` input is optional.
+
+Without a token, the Action makes unauthenticated GitHub API requests and processes repositories returned as publicly accessible by GitHub.
+
+With a token:
 
 ```yaml
 with:
@@ -107,54 +179,61 @@ with:
   token: ${{ secrets.STARRED_REPOSITORIES_TOKEN }}
 ```
 
-The Action only processes repositories returned by GitHub. It does not expose or print repository data that the API does not make available to the request.
+the Action uses authenticated API requests.
+
+The Action only processes repository data returned by GitHub. It does not intentionally expose or print repository data that is unavailable to the API request.
 
 ## Inputs
 
-| Input         | Required | Default                     | Description                             |
-| ------------- | -------- | --------------------------- | --------------------------------------- |
-| `username`    | Yes      | —                           | GitHub username whose stars are fetched |
-| `output-file` | No       | `REPOSITORY_STAR_LIST.md`   | Markdown table output                   |
-| `digest-file` | No       | `REPOSITORY_STAR_DIGEST.md` | AI digest output                        |
-| `sort-by`     | No       | `name`                      | `name`, `stars`, or `updated`           |
-| `sort-order`  | No       | `asc`                       | `asc` or `desc`                         |
-| `token`       | No       | —                           | Optional GitHub authentication token    |
+| Input         | Required | Default                      | Description                                            |
+| ------------- | -------- | ---------------------------- | ------------------------------------------------------ |
+| `username`    | Yes      | —                            | GitHub username whose starred repositories are fetched |
+| `output-file` | No       | `REPOSITORY_STAR_LIST.md`    | Markdown table output path                             |
+| `digest-file` | No       | `REPOSITORY_STAR_DIGEST.txt` | AI-ready text digest output path                       |
+| `sort-by`     | No       | `name`                       | Sort by `name`, `stars`, or `updated`                  |
+| `sort-order`  | No       | `asc`                        | Sort order: `asc` or `desc`                            |
+| `token`       | No       | —                            | Optional GitHub authentication token                   |
 
-## Custom Output
+## Custom Output Files
 
 ```yaml
 with:
   username: Deri-Kurniawan
-  output-file: docs/stars.md
-  digest-file: docs/star-digest.md
+  output-file: docs/github-stars.md
+  digest-file: docs/github-stars.txt
 ```
+
+The Action automatically creates missing directories.
 
 ## Sorting
 
-Default:
+### Name ascending — default
 
 ```yaml
-sort-by: name
-sort-order: asc
+with:
+  sort-by: name
+  sort-order: asc
 ```
 
-Other examples:
+### Most starred first
 
 ```yaml
-# Most starred first
-sort-by: stars
-sort-order: desc
+with:
+  sort-by: stars
+  sort-order: desc
 ```
 
+### Recently updated first
+
 ```yaml
-# Recently updated first
-sort-by: updated
-sort-order: desc
+with:
+  sort-by: updated
+  sort-order: desc
 ```
 
 ## Pagination
 
-The Action automatically fetches every page until GitHub returns an empty response:
+The Action automatically fetches all available pages until GitHub returns an empty response.
 
 ```text
 Page 1 → 100 repositories
@@ -165,14 +244,47 @@ Page N → remaining repositories
 Page N+1 → empty → stop
 ```
 
+No manual page configuration is required.
+
+## Outputs
+
+| Output        | Description                          |
+| ------------- | ------------------------------------ |
+| `count`       | Total number of repositories fetched |
+| `file`        | Generated Markdown table path        |
+| `digest-file` | Generated AI digest path             |
+
+Example:
+
+```yaml
+- name: Generate starred repositories
+  id: stars
+  uses: Deri-Kurniawan/github-starred-repository-action@v1
+  with:
+    username: Deri-Kurniawan
+
+- name: Show result
+  run: |
+    echo "Repositories: ${{ steps.stars.outputs.count }}"
+    echo "List: ${{ steps.stars.outputs.file }}"
+    echo "Digest: ${{ steps.stars.outputs.digest-file }}"
+```
+
 ## Development
+
+Install dependencies:
 
 ```bash
 npm install
+```
+
+Build the Action:
+
+```bash
 npm run build
 ```
 
-The build generates:
+This generates:
 
 ```text
 dist/index.js

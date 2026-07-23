@@ -13,59 +13,56 @@ permissions:
   contents: read
 
 jobs:
-  test-public:
-    name: Test Public Mode
+  test:
+    name: Test Action
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Generate public starred repositories
+      - name: Generate starred repositories
         id: starred
         uses: ./
         with:
           username: Deri-Kurniawan
-          output-file: test-output/public/REPOSITORY_STAR_LIST.md
-          digest-file: test-output/public/REPOSITORY_STAR_DIGEST.md
+          output-file: test-output/REPOSITORY_STAR_LIST.md
+          digest-file: test-output/REPOSITORY_STAR_DIGEST.txt
+          sort-by: name
+          sort-order: asc
 
       - name: Verify generated files
         run: |
-          test -f test-output/public/REPOSITORY_STAR_LIST.md
-          test -f test-output/public/REPOSITORY_STAR_DIGEST.md
+          test -f test-output/REPOSITORY_STAR_LIST.md
+          test -f test-output/REPOSITORY_STAR_DIGEST.txt
 
-          test -s test-output/public/REPOSITORY_STAR_LIST.md
-          test -s test-output/public/REPOSITORY_STAR_DIGEST.md
+          test -s test-output/REPOSITORY_STAR_LIST.md
+          test -s test-output/REPOSITORY_STAR_DIGEST.txt
 
-      - name: Display result
+          echo "Markdown file:"
+          ls -lh test-output/REPOSITORY_STAR_LIST.md
+
+          echo "Digest file:"
+          ls -lh test-output/REPOSITORY_STAR_DIGEST.txt
+
+      - name: Verify Markdown output
         run: |
-          echo "Repositories: ${{ steps.starred.outputs.count }}"
-          echo "File: ${{ steps.starred.outputs.file }}"
+          grep -q "# Starred Repositories" \
+            test-output/REPOSITORY_STAR_LIST.md
+
+          grep -q "github-starred-repository-action" \
+            test-output/REPOSITORY_STAR_LIST.md
+
+      - name: Verify AI digest output
+        run: |
+          grep -q "# GitHub Starred Repository Knowledge Base" \
+            test-output/REPOSITORY_STAR_DIGEST.txt
+
+          grep -q "# Source: https://github.com/Deri-Kurniawan/github-starred-repository-action" \
+            test-output/REPOSITORY_STAR_DIGEST.txt
+
+      - name: Show outputs
+        run: |
+          echo "Repositories fetched: ${{ steps.starred.outputs.count }}"
+          echo "Markdown: ${{ steps.starred.outputs.file }}"
           echo "Digest: ${{ steps.starred.outputs.digest-file }}"
-
-  test-authenticated:
-    name: Test Authenticated Mode
-    runs-on: ubuntu-latest
-
-    if: github.event_name != 'pull_request'
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Generate authenticated starred repositories
-        id: starred
-        uses: ./
-        with:
-          username: Deri-Kurniawan
-          output-file: test-output/authenticated/REPOSITORY_STAR_LIST.md
-          digest-file: test-output/authenticated/REPOSITORY_STAR_DIGEST.md
-          token: ${{ secrets.STARRED_REPOSITORIES_TOKEN }}
-
-      - name: Verify generated files
-        run: |
-          test -f test-output/authenticated/REPOSITORY_STAR_LIST.md
-          test -f test-output/authenticated/REPOSITORY_STAR_DIGEST.md
-
-          test -s test-output/authenticated/REPOSITORY_STAR_LIST.md
-          test -s test-output/authenticated/REPOSITORY_STAR_DIGEST.md

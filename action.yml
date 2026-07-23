@@ -1,9 +1,5 @@
 name: GitHub Starred Repository Knowledge Base
-
-description: >
-  Fetch GitHub starred repositories and generate a human-readable Markdown
-  table and a compact AI-ready text knowledge base.
-
+description: Generate a human-readable Markdown table and a compact AI-ready text knowledge base from GitHub starred repositories.
 author: Deri Kurniawan
 
 branding:
@@ -31,7 +27,7 @@ inputs:
     default: name
 
   sort-order:
-    description: Sort order: asc or desc.
+    description: Sort order, either asc or desc.
     required: false
     default: asc
 
