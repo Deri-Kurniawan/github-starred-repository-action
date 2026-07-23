@@ -1,0 +1,33 @@
+name: "GitHub Starred Repository List"
+description: "Fetch all starred repositories from a GitHub user and generate a customizable Markdown file"
+author: "Deri Kurniawan"
+
+branding:
+  icon: "star"
+  color: "yellow"
+
+inputs:
+  username:
+    description: "GitHub username whose starred repositories will be fetched"
+    required: true
+
+  output-file:
+    description: "Path and filename of the generated Markdown file"
+    required: false
+    default: "REPOSITORY_STAR_LIST.md"
+
+  token:
+    description: "GitHub token used to access the GitHub API"
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  count:
+    description: "Total number of starred repositories fetched"
+
+  file:
+    description: "Path of the generated Markdown file"
+
+runs:
+  using: "node20"
+  main: "dist/index.js"

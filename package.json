@@ -1,0 +1,15 @@
+{
+    "name": "github-starred-repository-action",
+    "version": "1.0.0",
+    "description": "A GitHub Action that fetches all starred repositories from a GitHub user and generates a customizable Markdown file.",
+    "type": "module",
+    "scripts": {
+        "build": "ncc build src/index.js --license licenses.txt"
+    },
+    "dependencies": {
+        "@actions/core": "^3.0.1"
+    },
+    "devDependencies": {
+        "@vercel/ncc": "^0.44.1"
+    }
+}

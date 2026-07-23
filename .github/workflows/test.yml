@@ -1,0 +1,42 @@
+name: Test GitHub Starred Repository Action
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate starred repository list
+        id: starred
+        uses: ./
+        with:
+          username: Deri-Kurniawan
+          output-file: test-output/REPOSITORY_STAR_LIST.md
+          token: ${{ github.token }}
+
+      - name: Display outputs
+        run: |
+          echo "Total repositories: ${{ steps.starred.outputs.count }}"
+          echo "Generated file: ${{ steps.starred.outputs.file }}"
+
+      - name: Verify generated file
+        run: |
+          test -f test-output/REPOSITORY_STAR_LIST.md
+
+      - name: Display generated file
+        run: |
+          cat test-output/REPOSITORY_STAR_LIST.md
